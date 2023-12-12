@@ -165,7 +165,10 @@ plot(1:7, rs$adjr2, xlab="No of parameters", ylab="Adj R2")
 
 The Mallow's Cp criterion and Adjusted $R^2$ suggests that the model with four parameters (`population`, `murder`, `hs_grad`, `frost`) is the best fit. 
 
-e) The LASSO method
+e) The LASSO method  
+```{r}
+
+```
 
 f) Compare the subsets from c, d, and e
 
