@@ -17,6 +17,7 @@ library(ggplot2)
 library(faraway)
 library(gtsummary)
 library(flextable)
+library(corrplot)
 
 # import data set
 df = state.x77 |> 
@@ -112,7 +113,34 @@ hist(df_trans$illiteracy, main = "Hist. of illiteracy", xlab = "illiteracy")
 hist(df_trans$area, main = "Hist. of area", xlab = "area")
 ```
 
+I will use the data set including the log-transformed variables for the later analysis. Let's check the correlation between each variable and linear regression model including all variables. 
+
+
+```{r}
+df_val = df_trans |> 
+  select(-state)
+
+# plot pairwise correlations
+corrplot(cor(df_val), type = "upper", diag = FALSE)
+
+# fit regression using all predictors
+life_lm = lm(life_exp ~ ., data = df_val)
+summary(life_lm)
+```
+
 c) Automatic procedures 
+In this section, I will use backward and forward procedures. 
+```{r}
+# backward
+step(life_lm, direction = "backward")
+
+# forward
+# fit using one function
+intercept_only = lm(life_exp ~ 1, data = df_val)
+step(intercept_only, direction = "forward", scope = formula(life_lm))
+```
+
+The both procedures generated the same model (variables included in the final model: `murder`, `hs_grad`, `population`, `frost`). 
 
 d) Criterion-based procedures
 
