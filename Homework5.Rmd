@@ -1,0 +1,134 @@
+---
+title: "Homework5"
+author: "Yuki Joyama"
+date: "2023-12-12"
+output: 
+  pdf_document:
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message=FALSE,
+  warning=FALSE)
+
+library(tidyverse)
+library(ggplot2)
+library(faraway)
+library(gtsummary)
+library(flextable)
+
+# import data set
+df = state.x77 |> 
+  as_tibble(rownames = "state") |> 
+  mutate(
+    state = as_factor(state)
+  ) |> 
+  janitor::clean_names()
+```
+
+# Problem 1
+a) The following table shows the descriptive statistics for all variables of interest in 50 States. 
+```{r}
+df |> 
+  select(-state) |> 
+  tbl_summary(
+    statistic = list(
+      all_continuous() ~ "{mean} / {median} ({sd})",
+      all_categorical() ~ "{n} ({p}%)"
+    ),
+    digits = all_continuous() ~ 1,
+    label = list(
+      population ~ "Population",
+      income ~ "Income per capita",
+      illiteracy ~ "Illiteracy (%)",
+      life_exp ~ "Life Expectancy (years)",
+      murder ~ "Murder rate (per 100,000)",
+      hs_grad ~ "High graduates (%)",
+      frost ~ "Number of days below freezing",
+      area ~ "Land area (mile^2)"
+    )
+  ) |> 
+  as_flex_table()
+```
+
+b) 
+```{r}
+# normality test by shapiro-wilk test
+sw_t = tibble(num = 2:9) |> 
+  mutate(
+    var = colnames(df)[-1],
+    sw = map(num, \(i) shapiro.test(df[[i]])),
+    sw_results = map(sw, broom::tidy)
+  ) |> 
+  unnest(sw_results)
+
+sw_t |> 
+  select(var, statistic, p.value) |>
+  mutate_at(2:3, round, 3) |> 
+  mutate(
+    p.value = ifelse(p.value < 0.001, "<0.001", p.value)
+  ) |> 
+  knitr::kable()
+```
+
+The results of Shapiro-Wilk test indicates that variable `population`, `illiteracy`, `murder`, `hs_grad`, and `area` is not normally distributed.  
+The histogram and Q-Q plots for these variables are as follows:
+
+```{r fig.width=10, fig.height=16}
+df_val = df |> 
+  select(population, illiteracy, murder, hs_grad, area)
+a = colnames(df_val)[1:5]
+
+par(mfrow = c(5, 2), mar = c(4, 4, 2, 1))
+
+for (i in 1:5) {
+  sub <- df_val[[i]]
+  
+  # Create a new plot for each iteration
+  hist(sub, main = paste("Hist. of", a[i], sep = " "), xlab = a[i])
+  qqnorm(sub, main = paste("Q-Q Plot of", a[i], sep = " "))
+  qqline(sub)
+}
+```
+
+Given the shape of the histograms, I will log-transform `population`, `illiteracy`, and `area`.
+
+```{r}
+df_trans = df |> 
+  mutate(
+    population = log(population),
+    illiteracy = log(illiteracy),
+    area = log(area)
+  )
+```
+
+Now, let's check these histograms.
+
+```{r fig.width=10, fig.height=4}
+par(mfrow = c(1, 3))
+hist(df_trans$population, main = "Hist. of population", xlab = "population")
+hist(df_trans$illiteracy, main = "Hist. of illiteracy", xlab = "illiteracy")
+hist(df_trans$area, main = "Hist. of area", xlab = "area")
+```
+
+c) Automatic procedures 
+
+d) Criterion-based procedures
+
+e) The LASSO method
+
+f) Compare the subsets from c, d, and e
+
+g) Findings
+
+
+
+
+
+
+
+
+
+
+
