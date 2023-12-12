@@ -18,6 +18,7 @@ library(faraway)
 library(gtsummary)
 library(flextable)
 library(corrplot)
+library(leaps)
 
 # import data set
 df = state.x77 |> 
@@ -140,9 +141,29 @@ intercept_only = lm(life_exp ~ 1, data = df_val)
 step(intercept_only, direction = "forward", scope = formula(life_lm))
 ```
 
-The both procedures generated the same model (variables included in the final model: `murder`, `hs_grad`, `population`, `frost`). 
+The both procedures generated the same model (variables included in the final model: `murder`, `hs_grad`, `population`, `frost`). There does not appear to be a close call, as the elimination/addition of each variable consistently decreases the AIC value and indicates a better model fit. Therefore, I would keep all the variables suggested by the procedure.  
+Intuitively, we could assume that there is an association between `illiteracy` and `HS graduation rate`. My subset does not include both, so instead of checking for multicollinearity, let's examine correlation.
 
-d) Criterion-based procedures
+```{r}
+cor(df_val$hs_grad, df_val$illiteracy)
+```
+
+There seems to be a moderate negative association between the two variables.
+
+d) Criterion-based procedures  
+```{r}
+b = regsubsets(life_exp ~ ., data = df_val)
+rs = summary(b)
+rs
+
+# plot of Cp and Adj-R2 as functions of parameters
+par(mfrow=c(1,2))
+plot(1:7, rs$cp, xlab="No of parameters", ylab="Cp Statistic")
+abline(0,1)
+plot(1:7, rs$adjr2, xlab="No of parameters", ylab="Adj R2")
+```
+
+The Mallow's Cp criterion and Adjusted $R^2$ suggests that the model with four parameters (`population`, `murder`, `hs_grad`, `frost`) is the best fit. 
 
 e) The LASSO method
 
