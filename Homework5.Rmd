@@ -22,6 +22,7 @@ library(glmnet)
 library(GGally)
 library(stargazer)
 library(caret)
+library(performance)
 
 # import data set
 df = state.x77 |> 
@@ -245,8 +246,13 @@ print(fit_lasso_val)
 The Root Mean Square Errors (RMSEs) from linear regression model (selected by c and d) and LASSO regression model (by e) indicate that the linear model has slightly better predictive ability in the testing data set. Thus, I will employ the linear regression model as my final model.  
 
 Let's check the model assumptions.  
-```{r}
 
+```{r fig.width=10, fig.height=15}
+# final model
+fit_lm_fin = lm(life_exp ~ murder + hs_grad + population + frost, data = df_val)
+
+# diagnostic plots
+check_model(fit_lm_fin)
 ```
 
 
