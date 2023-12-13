@@ -17,8 +17,11 @@ library(ggplot2)
 library(faraway)
 library(gtsummary)
 library(flextable)
-library(corrplot)
 library(leaps)
+library(glmnet)
+library(GGally)
+library(stargazer)
+library(caret)
 
 # import data set
 df = state.x77 |> 
@@ -122,7 +125,7 @@ df_val = df_trans |>
   select(-state)
 
 # plot pairwise correlations
-corrplot(cor(df_val), type = "upper", diag = FALSE)
+ggcorr(df_val, label = T)
 
 # fit regression using all predictors
 life_lm = lm(life_exp ~ ., data = df_val)
@@ -167,10 +170,85 @@ The Mallow's Cp criterion and Adjusted $R^2$ suggests that the model with four p
 
 e) The LASSO method  
 ```{r}
+df_val = df_val |> 
+  relocate(life_exp)
+
+# fit a LASSO with lambda = 5
+fit_5 = glmnet(as.matrix(df_val[2:8]), df_val$life_exp, lambda = 5)
+coef(fit_5)
+
+# fit a LASSO with lambda = 0.1
+fit_0.1 = glmnet(as.matrix(df_val[2:8]), df_val$life_exp, lambda = 0.1)
+coef(fit_0.1)
+
+# using cross validation to choose lambda
+lambda_seq = 10^seq(-3, 0, by = .1)
+set.seed(1)
+cv_object = cv.glmnet(
+  as.matrix(df_val[2:8]), 
+  df_val$life_exp,
+  lambda = lambda_seq,
+  nfolds = 5
+)
+cv_object
+
+# plot the CV results
+tibble(
+  lambda = cv_object$lambda,
+  mean_cv_error = cv_object$cvm
+) |> 
+  ggplot(aes(x = lambda, y = mean_cv_error)) +
+  geom_point()
+
+# extract the exact minimum lambda from the CV object
+cv_object$lambda.min
+
+# refit the lasso model with the best lambda
+fit_bestcv = glmnet(as.matrix(df_val[2:8]), df_val$life_exp, lambda = cv_object$lambda.min)
+coef(fit_bestcv)
+```
+
+The lambda value that minimizes the test MSE turns out to be `r cv_object$lambda.min`. The final model produced by the optimal lambda value does not include `income` and `illiteracy` because they were not influential enough. 
+
+f) Compare the subsets from c, d, and e  
+```{r}
+# prepare 10-fold 
+# use 10-fold validation and create the training sets
+train = trainControl(method = "cv", number = 10)
+
+# model validation (c and d)
+# fit the model
+fit_lm_val = train(
+  life_exp ~ murder + hs_grad + population + frost,
+  data = df_val,
+  trControl = train,
+  method = 'lm',
+  na.action = na.pass
+)
+
+print(fit_lm_val)
+
+# model validation (e)
+# fit the Lasso model using train function
+fit_lasso_val = train(
+  life_exp ~ murder + hs_grad + population + frost + area,
+  data = df_val,
+  trControl = train,
+  method = 'glmnet',
+  tuneGrid = expand.grid(alpha = 1, lambda = cv_object$lambda.min),
+  na.action = na.pass
+)
+
+print(fit_lasso_val)
+```
+
+The Root Mean Square Errors (RMSEs) from linear regression model (selected by c and d) and LASSO regression model (by e) indicate that the linear model has slightly better predictive ability in the testing data set. Thus, I will employ the linear regression model as my final model.  
+
+Let's check the model assumptions.  
+```{r}
 
 ```
 
-f) Compare the subsets from c, d, and e
 
 g) Findings
 
